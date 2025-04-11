@@ -1,3 +1,6 @@
+# 20250410 test 제출
+
+
 create database if not exists baseball_league;
 
 use baseball_league;
