@@ -9,3 +9,12 @@ CREATE TABLE IF NOT EXISTS test (
 );
 
 SELECT * FROM test;
+
+-- student 테이블 --
+CREATE TABLE student (
+	id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE
+);
+
+SELECT * FROM student;
