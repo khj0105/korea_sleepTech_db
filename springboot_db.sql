@@ -1,233 +1,193 @@
-CREATE DATABASE IF NOT EXISTS `springboot_db`;
+CREATE DATABASE IF NOT EXISTS `high_school_banking_system_webpage`
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_general_ci;
 
-USE `springboot_db`;
+USE `high_school_banking_system_webpage`;
 
--- test 테이블 --
-CREATE TABLE IF NOT EXISTS test (
-	id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(50) NOT NULL
+-- 학교 테이블 생성
+CREATE TABLE `school` (
+    school_id INT PRIMARY KEY,
+    school_name VARCHAR(30) NOT NULL,
+    school_address VARCHAR(255) NOT NULL,
+    contact_number VARCHAR(30) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-SELECT * FROM test;
-
--- student 테이블 --
-CREATE TABLE student (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE
+-- 관리자 (로그인 포함)
+CREATE TABLE `admin` (
+    admin_id VARCHAR(30) PRIMARY KEY,
+    school_id INT NOT NULL,
+    admin_username VARCHAR(50) UNIQUE NOT NULL,
+    admin_password VARCHAR(255) NOT NULL,
+    admin_name VARCHAR(30) NOT NULL,
+    email VARCHAR(50) UNIQUE NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES school(school_id)
 );
 
-SELECT * FROM student;
-
--- book 테이블 --
-CREATE TABLE book (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    writer VARCHAR(50) NOT NULL,
-    title VARCHAR(100) NOT NULL,
-    content VARCHAR(500) NOT NULL,
-    category VARCHAR(255) NOT NULL,
-    CONSTRAINT chk_category CHECK (category IN ('NOVEL', 'ESSAY', 'POEM', 'MAGAZINE'))
+-- 교사 (로그인 포함)
+CREATE TABLE `teacher` (
+    teacher_id VARCHAR(30) PRIMARY KEY,
+    school_id INT NOT NULL,
+    teacher_username VARCHAR(50) UNIQUE NOT NULL,
+    teacher_password VARCHAR(255) NOT NULL,
+    teacher_name VARCHAR(30) NOT NULL,
+    gender ENUM('MALE','FEMALE'),
+	email VARCHAR(50) UNIQUE NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    subject VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES school(school_id)
 );
 
-SELECT * FROM book;
+-- 학생 (로그인 포함)
+CREATE TABLE `student` (
+    student_id VARCHAR(30) PRIMARY KEY,
+    school_id INT NOT NULL,
+    student_username VARCHAR(50) UNIQUE NOT NULL,
+    student_password VARCHAR(255) NOT NULL,
+    student_number VARCHAR(50) UNIQUE NOT NULL,
+    student_name VARCHAR(20) NOT NULL,
+    grade ENUM('1', '2', '3') NOT NULL,
+    gender ENUM('MALE','FEMALE') NOT NULL,    
+    email VARCHAR(50) UNIQUE NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    birth_date DATE NOT NULL,
+    affiliation ENUM('LIBERAL_ARTS', 'NATURAL_SCIENCES') NOT NULL,
+    status ENUM('ENROLLED', 'GRADUATED') NOT NULL,
+    admission_year YEAR NOT NULL,
+    profile_image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES school(school_id)
+);
 
--- post(게시물) 테이블 --
-CREATE TABLE IF NOT EXISTS post (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
+-- 과목: 강의 개설용 정보 (수업 개요)
+CREATE TABLE `subject` (
+    subject_id VARCHAR(30) PRIMARY KEY,
+    school_id INT NOT NULL,
+    subject_name VARCHAR(50) NOT NULL,
+    grade ENUM('1', '2', '3') NOT NULL,
+    semester ENUM('1', '2') NOT NULL,
+    affiliation ENUM('LIBERAL_ARTS', 'NATURAL_SCIENCES') NOT NULL,
+    completion_classification ENUM('COMPLETED', 'NOT_COMPLETED') NOT NULL,
+    main_category ENUM('KOREAN', 'MATHEMATICS', 'ENGLISH', 'KOREAN_HISTORY') NOT NULL,
+    choice_category ENUM ('SOCIAL_STUDIES', 'SCIENCE', 'SECOND_FOREIGN_LANGUAGE', 
+    'ARTS_AND_PHYSICAL_EDUCATION', 'OTHERS') NOT NULL,
+    max_enrollment INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES school(school_id)
+);
+
+-- 교실
+CREATE TABLE `classroom` (
+    classroom_id INT PRIMARY KEY AUTO_INCREMENT,
+    class_number VARCHAR(10) NOT NULL,
+    capacity INT NOT NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    location VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 강의: 시간표 포함, 과목 실제 운영
+CREATE TABLE `lecture` (
+    lecture_id INT PRIMARY KEY AUTO_INCREMENT,
+    subject_id VARCHAR(30) NOT NULL,
+    teacher_id VARCHAR(30) NOT NULL,
+    admin_id VARCHAR(30) NOT NULL,
+    classroom_id INT NOT NULL,
+    day_of_week ENUM('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY') NOT NULL,
+    period INT NOT NULL,
+    lecture_content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (teacher_id) REFERENCES teacher(teacher_id),
+    FOREIGN KEY (admin_id) REFERENCES admin(admin_id),
+    FOREIGN KEY (classroom_id) REFERENCES classroom(classroom_id)
+);
+
+-- 수강 제한
+CREATE TABLE `course_restriction` (
+    restriction_id INT PRIMARY KEY AUTO_INCREMENT,
+    subject_id VARCHAR(30) NOT NULL,
+    allowed_grade ENUM('1', '2', '3') NOT NULL,
+    is_repeat_allowed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE(subject_id, allowed_grade),
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id)
+);
+
+-- 수강 신청
+CREATE TABLE `course_registration` (
+    registration_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id VARCHAR(30) NOT NULL,
+    lecture_id INT NOT NULL,
+    academic_year YEAR NOT NULL,
+    semester ENUM('1','2') NOT NULL,
+    registration_status ENUM('REGISTERED','CANCELLED') DEFAULT 'REGISTERED',
+    approval_status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    approval_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES student(student_id),
+    FOREIGN KEY (lecture_id) REFERENCES lecture(lecture_id)
+);
+
+-- 수강 이력
+CREATE TABLE `course_history` (
+    course_history_id VARCHAR(30) PRIMARY KEY,
+    student_id VARCHAR(30),
+    lecture_id INT,
+    academic_year YEAR NOT NULL,
+    semester ENUM('1', '2') NOT NULL,
+    grade ENUM('1', '2', '3'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- PRIMARY KEY (student_id, lecture_id, academic_year, semester),
+    FOREIGN KEY (student_id) REFERENCES student(student_id),
+    FOREIGN KEY (lecture_id) REFERENCES lecture(lecture_id)
+);
+
+-- 시간표
+CREATE TABLE `schedule` (
+   schedule_id VARCHAR(500) PRIMARY KEY,
+    student_id VARCHAR(30),
+    lecture_id INT,
+    -- PRIMARY KEY (student_id, lecture_id),
+    FOREIGN KEY (student_id) REFERENCES student(student_id),
+    FOREIGN KEY (lecture_id) REFERENCES lecture(lecture_id)
+);
+
+-- 공지사항
+CREATE TABLE `notice` (
+    notice_id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_id VARCHAR(30) NOT NULL,
     title VARCHAR(255) NOT NULL,
-    content VARCHAR(255) NOT NULL,
-    author VARCHAR(255) NOT NULL
+    notice_content TEXT NOT NULL,
+    target_audience ENUM('ALL', 'STUDENT', 'TEACHER') NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES admin(admin_id)
 );
 
--- comment(댓글) 테이블 --
-CREATE TABLE IF NOT EXISTS comment (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    post_id BIGINT,
-    content VARCHAR(255) NOT NULL,
-    commenter VARCHAR(255) NOT NULL,
-    FOREIGN KEY (post_id) REFERENCES post(id) ON DELETE CASCADE
+-- 커뮤니티
+CREATE TABLE `community` (
+  community_id INT PRIMARY KEY AUTO_INCREMENT,
+  category ENUM('SCHOOL', 'COURSE', 'ENTRANCE_EXAMINATION') NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  community_content TEXT NOT NULL,
+  author_id VARCHAR(30) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (author_id) REFERENCES student(student_id)
 );
-
-SELECT * FROM post;
-SELECT * FROM comment;
-
--- users(사용자) 테이블
-CREATE TABLE IF NOT EXISTS users (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME
-);
-
-SELECT * FROM users;
-
--- authority(권한) 관련 테이블 --
-# 권한 관리 테이블 설계(정규화 방식)
-# : 권한 종류를 roles 테이블로 분리
-#	, 이를 참조하여 user_roles에 저장
-# > 역할 이름을 고유값으로 관리, role_id를 통해 연결
-CREATE TABLE IF NOT EXISTS roles (
-	role_id BIGINT AUTO_INCREMENT PRIMARY KEY, -- 역할 고유 ID
-    role_name VARCHAR(50) NOT NULL UNIQUE		-- 역할 이름 (EX. ADMIN, USER), 중복 불가
-);
-
-INSERT INTO roles (role_name)
-VALUES
-	('USER'), ('ADMIN'), ('MANAGER');
-
-# 해당 테이블은 사용자와 역할의 관계를 나타내는 중간 테이블
-# : 사용자 한 명이 여러 역할을 가질 수 있고
-#	, 하나의 역할도 여러 사용자에게 부여될 수 있음
-# >다대다(ManyToMany) 관계
-CREATE TABLE IF NOT EXISTS user_roles (
-	user_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
-    PRIMARY KEY (user_id, role_id), -- 복합 기본키: 중복 매핑 방지
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
-);
-
-SELECT * FROM roles;
-SELECT * FROM user_roles;
-
--- log(기록) 테이블 --
-# 권한 변경 시 기록(로그) 테이블에 자동 저장
-CREATE TABLE IF NOT EXISTS role_change_logs(
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL, -- 권한이 변경된 사용자 ID(PK)
-    email VARCHAR(255) NOT NULL, -- 사용자 이메일
-    prev_roles TEXT,
-    new_roles TEXT,
-    changed_by VARCHAR(255) NOT NULL, -- 변경을 수행한 관리자 이메일
-    change_type VARCHAR(20) NOT NULL, -- 변경 유형(ADD, REMOVE, UPDATE 등)
-    change_reason VARCHAR(255), -- 변경 사유(필요 시 사용)
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES USERS(id) ON DELETE CASCADE
-);
-
-SELECT * FROM role_change_logs;
-
--- ---------------------------------------
-# 파일 시스템
-CREATE TABLE IF NOT EXISTS posts(
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS communities(
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS upload_files (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    original_name VARCHAR(255) NOT NULL, -- 사용자가 업로드한 원래 이름
-    file_name VARCHAR(255) NOT NULL, -- 서버에 저장된 이름
-    file_path VARCHAR(500) NOT NULL, -- 전체 경로 또는 상대 경로
-    file_type VARCHAR(100), -- MIME 타입 (image/png)
-    file_size BIGINT NOT NULL, -- 파일 크기(bytes)
-    
-    target_id BIGINT NOT NULL,
-    target_type ENUM('POST', 'COMMUNITY') NOT NULL,
-    
-    INDEX idx_target (target_type, target_id)
-);
-
-SELECT * FROM posts;
-SELECT * FROM communities;
-SELECT * FROM upload_files;
-
--- 주문 관리 시스템 (트랜잭션, 트리거, 인덱스, 뷰 학습) --
-CREATE TABLE IF NOT EXISTS products (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    price INT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-SELECT * FROM products;
-CREATE TABLE IF NOT EXISTS stocks (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    product_id BIGINT NOT NULL,
-    quantity INT NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
-DROP TABLE order_items;
-DROP TABLE order_logs;
-DROP TABLE orders;
-CREATE TABLE IF NOT EXISTS orders (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    order_status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- EX) 주문 대기 상태 - 담당자가 주문 승인 시 상태 변경
-	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS order_items (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id BIGINT NOT NULL, -- orders 테이블 참조 (주문의 공통 상태를 저장)
-    product_id BIGINT NOT NULL,
-    quantity INT NOT NULL, -- 주문 수량
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS order_logs (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id BIGINT NOT NULL,
-    message VARCHAR(255),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-);
-
-# 초기 데이터 삽입 스크립트 #
--- 기본 상품 등록
-INSERT INTO products (name, price)
-VALUES
-	('슬립테크 매트리스', 120), -- 1
-    ('수면 측정기기', 45),	   -- 2
-    ('아로마 수면램프', 30);   -- 3
-
--- 재고 등록
-INSERT INTO stocks(product_id, quantity)
-VALUES
-	(1, 100),
-    (2, 30),
-    (3, 45);
-
-# 인덱스 추가 ( 제품명 순서로 빠르게 검색하는 인덱스 추가)
-CREATE INDEX idx_product_name ON products(name);
-
-# 주문 요약 뷰 생성
-CREATE OR REPLACE VIEW order_summary AS
-SELECT
-	o.id AS order_id, o.user_id, p.name AS product_name, oi.quantity, p.price
-    , (oi.quantity * p.price) AS total_price
-FROM
-	orders o
-    JOIN order_items oi ON o.id = oi.order_id
-    JOIN products p ON oi.product_id = p.id;
-
-# 주문 생성 트리거
-DELIMITER // -- 구분 문자 변경 (기본값 ;)
-CREATE TRIGGER trg_after_order_insert
-AFTER INSERT ON orders
-FOR EACH ROW
-BEGIN
-		INSERT INTO order_logs(order_id, message)
-        VALUES (NEW.id CONCAT('주문이 생성되었습니다. 주문 ID: ', NEW.ID));
-END;
-//
-DELIMITER ;
-
-SELECT * FROM products;
-SELECT * FROM stocks;
-SELECT * FROM orders;
-SELECT * FROM order_items;
-SELECT * FROM order_logs;
